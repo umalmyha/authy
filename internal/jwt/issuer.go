@@ -19,13 +19,10 @@ type KeyPair struct {
 }
 
 type IssuerConfig struct {
-	issuer      string
-	method      jwt.SigningMethod
-	signKeyFunc SigningKeyFunc
-}
-
-type Claims struct {
-	jwt.RegisteredClaims
+	Issuer            string
+	Method            jwt.SigningMethod
+	SigningKeyFunc    SigningKeyFunc
+	ValidationKeyFunc ValidationKeyFunc
 }
 
 type Issuer struct {
@@ -45,20 +42,45 @@ func NewIssuer(keys []KeyPair, cfg IssuerConfig) *Issuer {
 	}
 }
 
-func (i *Issuer) Sign(c MapClaims) error {
-	rc := MapClaims{
-		"iss": i.cfg.issuer,
-		"kid": uuid.NewString(),
+func (i *Issuer) Sign(mc Claims) (string, error) {
+	claims := make(jwt.MapClaims, len(mc))
+	for k, v := range mc {
+		claims[k] = v
 	}
 
-	token := jwt.NewWithClaims(i.cfg.method, rc)
+	claims["iss"] = i.cfg.Issuer
+	claims["kid"] = uuid.NewString()
 
-	kid := i.cfg.signKeyFunc()
+	token := jwt.NewWithClaims(i.cfg.Method, claims)
+
+	kid := i.cfg.SigningKeyFunc()
 	kp, ok := i.keys[kid]
 	if !ok {
-		return fmt.Errorf("failed to sign JWT: key pair with id %s is missing", kid)
+		return "", fmt.Errorf("failed to sign JWT: key pair with id %s is missing", kid)
 	}
 
-	token.SignedString()
+	signed, err := token.SignedString(kp.PrivateKey)
+	if err != nil {
+		return "", err
+	}
 
+	return signed, nil
+}
+
+func (i *Issuer) Parse(raw string) error {
+	var claims jwt.MapClaims
+	token, err := jwt.ParseWithClaims(
+		raw,
+		claims,
+		func(t *jwt.Token) (any, error) {
+			return i.cfg.ValidationKeyFunc()
+		}
+		i.cfg.ValidationKeyFunc,
+		jwt.WithIssuer(i.cfg.Issuer),
+		jwt.WithValidMethods([]string{i.cfg.Method.Alg()}),
+		jwt.WithIssuedAt(),
+	)
+	if err != nil {
+		return err
+	}
 }

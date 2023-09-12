@@ -4,14 +4,13 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/dimfeld/httptreemux/v5"
+	"github.com/go-chi/chi/v5"
 	"github.com/umalmyha/kit/bootstrap"
 )
 
 func main() {
-	router := httptreemux.NewContextMux()
-	router.POST("/signup", func(w http.ResponseWriter, r *http.Request) {})
-	router.POST("/signin", func(w http.ResponseWriter, r *http.Request) {})
+
+	mux := chi.NewRouter()
 
 	srv := &http.Server{
 		Addr:                         ":8080",
