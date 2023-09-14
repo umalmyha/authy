@@ -2,21 +2,31 @@ package main
 
 import (
 	"context"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/umalmyha/kit/bootstrap"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 func main() {
+	logger, err := zapLogger()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer logger.Sync()
 
 	mux := chi.NewRouter()
+	mux.Post("/login", func(writer http.ResponseWriter, request *http.Request) {
+
+	})
 
 	srv := &http.Server{
 		Addr:                         ":8080",
-		Handler:                      router,
+		Handler:                      mux,
 		DisableGeneralOptionsHandler: false,
-		TLSConfig:                    nil,
 		ReadTimeout:                  0,
 		ReadHeaderTimeout:            0,
 		WriteTimeout:                 0,
@@ -41,4 +51,19 @@ func main() {
 	if err := orc.Serve(); err != nil {
 
 	}
+}
+
+func zapLogger() (*zap.SugaredLogger, error) {
+	cfg := zap.NewProductionConfig()
+	cfg.DisableStacktrace = true
+	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	cfg.EncoderConfig.CallerKey = "src"
+	cfg.InitialFields = map[string]any{"service": "authy"}
+
+	logger, err := cfg.Build()
+	if err != nil {
+		return nil, err
+	}
+
+	return logger.Sugar(), nil
 }
