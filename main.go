@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/labstack/echo/v4"
 	"github.com/umalmyha/kit/bootstrap"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -18,14 +18,9 @@ func main() {
 	}
 	defer logger.Sync()
 
-	mux := chi.NewRouter()
-	mux.Post("/login", func(writer http.ResponseWriter, request *http.Request) {
-
-	})
-
 	srv := &http.Server{
 		Addr:                         ":8080",
-		Handler:                      mux,
+		Handler:                      nil,
 		DisableGeneralOptionsHandler: false,
 		ReadTimeout:                  0,
 		ReadHeaderTimeout:            0,
@@ -38,6 +33,8 @@ func main() {
 		BaseContext:                  nil,
 		ConnContext:                  nil,
 	}
+
+	e := echo.New()
 
 	start := func() error {
 		return srv.ListenAndServe()
